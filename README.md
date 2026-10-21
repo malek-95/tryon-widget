@@ -14,9 +14,31 @@ Un widget JavaScript qu'on ajoute à n'importe quel site (Shopify, WooCommerce, 
 
 ## 1. Installation
 
+### Option rapide — sans Node.js (recommandé pour un site existant)
+
+1. Téléchargez **`tryon-widget-vX.Y.Z.zip`** depuis la page [Releases](https://github.com/malek-95/tryon-widget/releases/latest).
+2. Décompressez-le : vous obtenez un dossier `tryon/` (widget, moteur MediaPipe et modèle de pose, déjà inclus).
+3. Copiez ce dossier dans le dossier public de votre site, pour qu'il soit accessible à l'adresse `https://votre-site/tryon/tryon.js`.
+4. Ajoutez une balise `<script>` et des boutons « Essayer » (voir section 2).
+
+```
+votre-site/
+├── index.html
+└── tryon/
+    ├── tryon.js
+    ├── vendor/      moteur MediaPipe (WebAssembly)
+    └── models/      modèle de pose
+```
+
+Votre hébergement doit servir les fichiers `.wasm` avec le type `application/wasm` (c'est le cas de la plupart des hébergeurs, de Nginx, Apache, Netlify, Vercel…).
+
+### Option serveur — avec Node.js (pour développer ou héberger le widget à part)
+
 Prérequis : Node.js 18 ou plus.
 
 ```bash
+git clone https://github.com/malek-95/tryon-widget.git
+cd tryon-widget
 npm install        # installe et copie le moteur dans public/tryon/vendor, télécharge le modèle
 npm start          # http://localhost:3000  → boutique de démo
 ```

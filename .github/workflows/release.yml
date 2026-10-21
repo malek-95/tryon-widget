@@ -1,0 +1,48 @@
+# Publie un zip prêt à l'emploi à chaque tag vX.Y.Z (ex. git tag v1.0.0 && git push --tags).
+# Le zip contient le dossier tryon/ complet (widget + moteur MediaPipe + modèle de pose) :
+# il suffit de le copier sur n'importe quel site, sans Node.js.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Installer (copie MediaPipe + télécharge le modèle)
+        run: npm ci
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+
+      - name: Vérifier le widget
+        run: |
+          node --check public/tryon/tryon.js
+          test -f public/tryon/models/pose_landmarker_lite.task
+
+      - name: Construire le zip
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          mkdir -p dist
+          cp -R public/tryon dist/tryon
+          cp LICENSE NOTICE dist/tryon/
+          curl -fsSL https://www.apache.org/licenses/LICENSE-2.0.txt -o dist/tryon/vendor/LICENSE-MediaPipe-Apache-2.0.txt
+          cd dist && zip -qr "tryon-widget-${VERSION}.zip" tryon
+
+      - name: Créer la release GitHub
+        run: |
+          gh release create "${GITHUB_REF_NAME}" "dist/tryon-widget-${GITHUB_REF_NAME}.zip" \
+            --title "TryOn Widget ${GITHUB_REF_NAME}" \
+            --notes "Téléchargez **tryon-widget-${GITHUB_REF_NAME}.zip**, décompressez-le dans le dossier public de votre site, puis ajoutez \`<script src=\"/tryon/tryon.js\" defer></script>\`. Voir le README pour l'intégration."
+        env:
+          GH_TOKEN: ${{ github.token }}
