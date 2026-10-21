@@ -1,0 +1,17 @@
+TryOn Widget
+Copyright (c) 2026 Malek Maoua — MIT License (see LICENSE)
+
+This project uses, but does not include in this repository:
+
+  MediaPipe Tasks Vision (@mediapipe/tasks-vision) and the Pose Landmarker model
+  Copyright Google LLC
+  Licensed under the Apache License, Version 2.0
+  https://github.com/google-ai-edge/mediapipe
+  https://www.apache.org/licenses/LICENSE-2.0
+
+These files are fetched at install time (npm install) and served from the
+integrator's own server. Redistributions of those files must keep the
+Apache License 2.0 and its notices.
+
+The sample garment images in demo/assets/ were created for this project and
+are released under the same MIT License.

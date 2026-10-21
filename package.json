@@ -1,0 +1,39 @@
+{
+  "name": "tryon-widget",
+  "version": "1.0.0",
+  "description": "Essayage virtuel (photo + caméra) intégrable sur tout site web, 100% dans le navigateur",
+  "main": "server.js",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "postinstall": "node scripts/setup.mjs",
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@mediapipe/tasks-vision": "1.1.1",
+    "express": "^5.3.0"
+  },
+  "type": "module",
+  "private": true,
+  "author": "Malek Maoua",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/malek-95/tryon-widget.git"
+  },
+  "homepage": "https://github.com/malek-95/tryon-widget#readme",
+  "bugs": {
+    "url": "https://github.com/malek-95/tryon-widget/issues"
+  },
+  "keywords": [
+    "virtual-try-on",
+    "essayage-virtuel",
+    "e-commerce",
+    "mediapipe",
+    "pose",
+    "widget"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

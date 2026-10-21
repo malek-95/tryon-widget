@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Boutique démo — Essayage virtuel</title>
+  <style>
+    :root { --ink:#16161a; --muted:#6b6b76; --line:#e7e7ec; --bg:#fafafa; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:var(--ink); background:var(--bg); }
+    header { padding:28px 16px 8px; max-width:1040px; margin:0 auto; }
+    h1 { margin:0 0 6px; font-size:26px; letter-spacing:-.01em; }
+    header p { margin:0; color:var(--muted); }
+    main { max-width:1040px; margin:0 auto; padding:16px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:16px; }
+    .card { background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; }
+    .card img { width:100%; aspect-ratio:1; object-fit:contain; background:#f3f3f6; padding:24px; }
+    .card div { padding:14px; display:flex; flex-direction:column; gap:10px; flex:1; }
+    .card h2 { font-size:15px; margin:0; }
+    .price { color:var(--muted); font-size:14px; }
+    .try { margin-top:auto; border:1.5px solid var(--ink); background:#fff; color:var(--ink); padding:10px; border-radius:10px; font-weight:600; font-size:14px; cursor:pointer; }
+    .try:hover { background:var(--ink); color:#fff; }
+    .outfit { margin:24px 0; padding:18px; border:1px dashed #c9c9d3; border-radius:14px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; background:#fff; }
+    .outfit p { margin:0; color:var(--muted); font-size:14px; }
+    .outfit button { border:0; background:var(--ink); color:#fff; padding:12px 18px; border-radius:10px; font-weight:600; cursor:pointer; }
+    code { background:#f0f0f4; padding:2px 6px; border-radius:5px; font-size:13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Boutique démo</h1>
+    <p>Cliquez sur « Essayer » : importez une photo de vous en pied ou utilisez la caméra.</p>
+  </header>
+  <main>
+    <div class="grid">
+      <article class="card">
+        <img src="assets/tshirt.png" alt="T-shirt bleu">
+        <div>
+          <h2>T-shirt coton bleu</h2>
+          <span class="price">39,000 DT</span>
+          <!-- Intégration : un simple bouton avec des attributs data-tryon-* -->
+          <button class="try"
+                  data-tryon-type="top"
+                  data-tryon-image="assets/tshirt.png"
+                  data-tryon-name="T-shirt coton bleu"
+                  data-tryon-in="look-1">Essayer</button>
+        </div>
+      </article>
+      <article class="card">
+        <img src="assets/jeans.png" alt="Jean brut">
+        <div>
+          <h2>Jean coupe droite</h2>
+          <span class="price">89,000 DT</span>
+          <button class="try"
+                  data-tryon-type="bottom"
+                  data-tryon-image="assets/jeans.png"
+                  data-tryon-name="Jean coupe droite"
+                  data-tryon-in="look-1">Essayer</button>
+        </div>
+      </article>
+      <article class="card">
+        <img src="assets/sneaker.png" alt="Basket rouge">
+        <div>
+          <h2>Basket montante rouge</h2>
+          <span class="price">129,000 DT</span>
+          <button class="try"
+                  data-tryon-type="shoes"
+                  data-tryon-image="assets/sneaker.png"
+                  data-tryon-name="Basket montante rouge"
+                  data-tryon-in="look-1">Essayer</button>
+        </div>
+      </article>
+    </div>
+
+    <section class="outfit">
+      <p>Essayez les trois articles ensemble avec <code>data-tryon-group</code>.</p>
+      <button data-tryon-group="look-1">Essayer la tenue complète</button>
+    </section>
+  </main>
+
+  <!-- Une seule ligne à ajouter sur n'importe quel site -->
+  <script src="/tryon/tryon.js" data-lang="fr" data-accent="#16161a" defer></script>
+</body>
+</html>
