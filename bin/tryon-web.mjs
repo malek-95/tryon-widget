@@ -33,7 +33,7 @@ async function init(arg) {
 
   const mediapipeDir = path.dirname(require.resolve('@mediapipe/tasks-vision'));
   const model = path.join(pkgRoot, 'public/tryon/models/pose_landmarker_lite.task');
-  if (!(await exists(model))) throw new Error(`modèle de pose introuvable (${model}). Réinstallez le paquet tryon-web.`);
+  if (!(await exists(model))) throw new Error(`modèle de pose introuvable (${model}). Réinstallez le paquet @malkos911/tryon-web.`);
 
   await mkdir(path.join(dest, 'vendor'), { recursive: true });
   await mkdir(path.join(dest, 'models'), { recursive: true });

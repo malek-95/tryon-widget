@@ -1,5 +1,5 @@
 {
-  "name": "tryon-web",
+  "name": "@malkos911/tryon-web",
   "version": "1.0.0",
   "description": "Essayage virtuel (photo + caméra) intégrable sur tout site web, 100% dans le navigateur",
   "type": "module",

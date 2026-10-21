@@ -1,6 +1,6 @@
 # TryOn Widget — essayage virtuel pour sites e-commerce
 
-[![npm](https://img.shields.io/npm/v/tryon-web)](https://www.npmjs.com/package/tryon-web) ![Licence MIT](https://img.shields.io/badge/licence-MIT-blue) ![Sans service tiers](https://img.shields.io/badge/100%25-dans%20le%20navigateur-green)
+[![npm](https://img.shields.io/npm/v/@malkos911/tryon-web)](https://www.npmjs.com/package/@malkos911/tryon-web) ![Licence MIT](https://img.shields.io/badge/licence-MIT-blue) ![Sans service tiers](https://img.shields.io/badge/100%25-dans%20le%20navigateur-green)
 
 Un widget JavaScript qu'on ajoute à n'importe quel site (Shopify, WooCommerce, PrestaShop, site sur mesure…) pour permettre aux clients d'essayer **t-shirts, pantalons et chaussures** :
 
@@ -19,7 +19,7 @@ Un widget JavaScript qu'on ajoute à n'importe quel site (Shopify, WooCommerce, 
 Dans votre projet web :
 
 ```bash
-npm install tryon-web
+npm install @malkos911/tryon-web
 npx tryon-web init
 ```
 
@@ -31,7 +31,7 @@ Pour recopier automatiquement les fichiers à chaque mise à jour du paquet, ajo
 "scripts": { "postinstall": "tryon-web init" }
 ```
 
-**React, Vue, Next.js… :** au lieu de la balise `<script>`, vous pouvez importer le widget côté client avec `import 'tryon-web'`, puis appeler `window.TryOn.open(...)`. Le moteur est chargé depuis `/tryon/` (le dossier créé par `init`). Avec Next.js, faites l'import dans un composant `'use client'` ou dans un `useEffect`.
+**React, Vue, Next.js… :** au lieu de la balise `<script>`, vous pouvez importer le widget côté client avec `import '@malkos911/tryon-web'`, puis appeler `window.TryOn.open(...)`. Le moteur est chargé depuis `/tryon/` (le dossier créé par `init`). Avec Next.js, faites l'import dans un composant `'use client'` ou dans un `useEffect`.
 
 ### Sans Node.js — zip à télécharger
 
