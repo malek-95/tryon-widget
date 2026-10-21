@@ -1,3 +1,4 @@
 node_modules/
 public/tryon/vendor/
 public/tryon/models/
+tests/output/
