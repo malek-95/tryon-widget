@@ -1,6 +1,6 @@
 # TryOn Widget — essayage virtuel pour sites e-commerce
 
-![Licence MIT](https://img.shields.io/badge/licence-MIT-blue) ![Sans service tiers](https://img.shields.io/badge/100%25-dans%20le%20navigateur-green)
+[![npm](https://img.shields.io/npm/v/tryon-web)](https://www.npmjs.com/package/tryon-web) ![Licence MIT](https://img.shields.io/badge/licence-MIT-blue) ![Sans service tiers](https://img.shields.io/badge/100%25-dans%20le%20navigateur-green)
 
 Un widget JavaScript qu'on ajoute à n'importe quel site (Shopify, WooCommerce, PrestaShop, site sur mesure…) pour permettre aux clients d'essayer **t-shirts, pantalons et chaussures** :
 
@@ -14,7 +14,26 @@ Un widget JavaScript qu'on ajoute à n'importe quel site (Shopify, WooCommerce, 
 
 ## 1. Installation
 
-### Option rapide — sans Node.js (recommandé pour un site existant)
+### Avec npm (recommandé)
+
+Dans votre projet web :
+
+```bash
+npm install tryon-web
+npx tryon-web init
+```
+
+`init` copie le widget, le moteur MediaPipe et le modèle de pose dans `public/tryon/` (ou dans le dossier indiqué : `npx tryon-web init static`, `npx tryon-web init .` pour un site HTML simple). Ajoutez ensuite la balise `<script src="/tryon/tryon.js" defer></script>` et des boutons « Essayer » (voir section 2).
+
+Pour recopier automatiquement les fichiers à chaque mise à jour du paquet, ajoutez dans le `package.json` de votre projet :
+
+```json
+"scripts": { "postinstall": "tryon-web init" }
+```
+
+**React, Vue, Next.js… :** au lieu de la balise `<script>`, vous pouvez importer le widget côté client avec `import 'tryon-web'`, puis appeler `window.TryOn.open(...)`. Le moteur est chargé depuis `/tryon/` (le dossier créé par `init`). Avec Next.js, faites l'import dans un composant `'use client'` ou dans un `useEffect`.
+
+### Sans Node.js — zip à télécharger
 
 1. Téléchargez **`tryon-widget-vX.Y.Z.zip`** depuis la page [Releases](https://github.com/malek-95/tryon-widget/releases/latest).
 2. Décompressez-le : vous obtenez un dossier `tryon/` (widget, moteur MediaPipe et modèle de pose, déjà inclus).
@@ -191,6 +210,7 @@ Pour aller plus loin sans service tiers, des modèles de génération « virtual
 ## 6. Structure
 
 ```
+bin/tryon-web.mjs       commande « npx tryon-web init » du paquet npm
 server.js               serveur Express (sert le widget + CORS + cache)
 scripts/setup.mjs       copie le moteur et télécharge le modèle
 public/tryon/tryon.js   le widget (un seul fichier, sans dépendance, sans build)

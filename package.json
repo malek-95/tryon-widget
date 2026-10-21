@@ -1,22 +1,41 @@
 {
-  "name": "tryon-widget",
+  "name": "tryon-web",
   "version": "1.0.0",
   "description": "Essayage virtuel (photo + caméra) intégrable sur tout site web, 100% dans le navigateur",
-  "main": "server.js",
+  "type": "module",
+  "main": "public/tryon/tryon.js",
+  "browser": "public/tryon/tryon.js",
+  "exports": {
+    ".": "./public/tryon/tryon.js",
+    "./tryon.js": "./public/tryon/tryon.js",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "tryon-web": "bin/tryon-web.mjs"
+  },
+  "files": [
+    "bin/",
+    "public/tryon/tryon.js",
+    "public/tryon/models/pose_landmarker_lite.task",
+    "LICENSE",
+    "NOTICE"
+  ],
   "scripts": {
     "setup": "node scripts/setup.mjs",
-    "postinstall": "node scripts/setup.mjs",
+    "prepare": "node scripts/setup.mjs",
+    "prepublishOnly": "node --check public/tryon/tryon.js && node -e \"require('fs').statSync('public/tryon/models/pose_landmarker_lite.task')\"",
     "start": "node server.js",
     "dev": "node --watch server.js",
     "test:render": "node tests/render.mjs"
   },
   "license": "MIT",
   "dependencies": {
-    "@mediapipe/tasks-vision": "1.1.1",
-    "express": "^5.3.0"
+    "@mediapipe/tasks-vision": "1.1.1"
   },
-  "type": "module",
-  "private": true,
+  "devDependencies": {
+    "express": "^5.3.0",
+    "puppeteer": "^24.0.0"
+  },
   "author": "Malek Maoua",
   "repository": {
     "type": "git",
@@ -36,8 +55,5 @@
   ],
   "engines": {
     "node": ">=18"
-  },
-  "devDependencies": {
-    "puppeteer": "^24.0.0"
   }
 }
