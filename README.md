@@ -101,6 +101,8 @@ Options de `TryOn.init` :
 | `modelUrl` | modèle lite | Chemin d'un autre modèle |
 | `delegate` | `GPU` | `GPU` (repli auto sur CPU) ou `CPU` |
 | `autoBind` | `true` | Active les boutons `data-tryon-*` |
+| `segmentation` | `true` | Découpe le vêtement sur la silhouette de la personne |
+| `shading` | `0.5` | Reprend les ombres et l'éclairage de la photo sur le vêtement (0 = désactivé) |
 
 Événements (pour vos statistiques) : `tryon:open`, `tryon:close`, `tryon:download` sur `window`.
 
@@ -122,7 +124,7 @@ C'est ce qui fait la qualité du résultat.
 
 - **PNG à fond transparent** de préférence. Un fond **uni** (blanc, gris) est détouré automatiquement ; un fond chargé (photo portée, décor) ne l'est pas.
 - Le vêtement **seul, à plat, vu de face**, cadré serré (les marges transparentes sont retirées automatiquement).
-- **Haut** : à plat, manches visibles, col en haut.
+- **Haut** : à plat, manches écartées et visibles, col en haut. Les manches sont découpées et pivotent à l'épaule pour suivre les bras : réglez `sleeve` / `sleeveLen` si elles occupent une autre part de l'image.
 - **Bas** : jambes droites et parallèles, taille en haut. L'image est découpée en bloc taille + deux jambes qui suivent les jambes du client.
 - **Chaussures** : une chaussure **de profil, pointe vers la droite**. Ajoutez `imageFront` (vue de face) pour un meilleur rendu quand le client est face à la caméra.
 - Taille conseillée : 600–1200 px sur le grand côté.
@@ -134,10 +136,12 @@ Les valeurs sont relatives au corps du client, donc valables quelle que soit sa 
 
 | Type | Clé | Défaut | Effet |
 |---|---|---|---|
-| `top` | `width` | 1.9 | Largeur de l'image ÷ largeur d'épaules (augmentez pour les manches longues ou l'oversize) |
+| `top` | `width` | 2.1 | Largeur de l'image ÷ largeur d'épaules (augmentez pour l'oversize) |
+| | `sleeve` | 0.25 | Part de la largeur de l'image occupée par chaque manche (0 = image d'un seul bloc) |
+| | `sleeveLen` | 0.45 | Part de la hauteur de l'image occupée par les manches |
 | | `length` | 1.25 | Hauteur ÷ longueur du torse (augmentez pour un sweat long) |
 | | `top` | 0.14 | Dépassement au-dessus des épaules (col) |
-| `bottom` | `width` | 2.1 | Largeur ÷ écart des hanches |
+| `bottom` | `width` | 1.75 | Largeur ÷ écart des hanches |
 | | `length` | 1.12 | Longueur ÷ longueur de jambe (≈0.55 pour un short) |
 | | `top` | 0.12 | Hauteur de la taille au-dessus des hanches |
 | | `waist` | 0.3 | Part de l'image (en haut) qui reste rigide (ceinture, bassin) |
@@ -150,7 +154,15 @@ Le client peut aussi ajuster lui-même (taille, hauteur, position, glisser sur l
 
 ## 5. Limites à connaître
 
-C'est une superposition 2D, pas une simulation de tissu : le vêtement suit la position, la taille et l'inclinaison du corps, mais ne se déforme pas avec les plis, ne passe pas derrière les bras et ne tient pas compte des vues de dos ou de profil prononcé. Les meilleurs résultats s'obtiennent avec une photo de face, en pied, bien éclairée, sur fond simple. Les chaussures sont le cas le plus approximatif.
+C'est une superposition 2D améliorée, pas une simulation de tissu. Le widget :
+
+- découpe le haut en corps + deux manches qui suivent les bras, et le pantalon en taille + deux jambes ;
+- découpe les vêtements sur la silhouette détectée, pour qu'ils ne débordent pas sur le décor ;
+- reprend la lumière et les ombres de la scène sur le vêtement ;
+- repasse les avant-bras par-dessus le vêtement quand ils sont devant le corps ;
+- fonctionne assis devant une webcam (hanches hors champ) pour les hauts.
+
+Il ne crée pas de vrais plis, ne gère pas les vues de dos ou de profil prononcé, et les chaussures restent le cas le plus approximatif. Meilleurs résultats : photo de face, bien éclairée, fond simple, et des images de produits détourées de bonne qualité (les images de démo sont de simples dessins).
 
 Pour aller plus loin sans service tiers, des modèles de génération « virtual try-on » open source (IDM‑VTON, OOTDiffusion…) peuvent tourner sur votre propre serveur avec un GPU — rendu photoréaliste mais 10–30 s par image et une machine dédiée.
 

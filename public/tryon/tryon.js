@@ -26,7 +26,9 @@
     accent: '#111111',
     autoBind: true,                    // active les boutons [data-tryon-image]
     delegate: 'GPU',                   // 'GPU' (repli automatique sur CPU) ou 'CPU'
-    detector: null                     // (tests) fonction async (source, mode) => landmarks[33]
+    segmentation: true,                // découpe le vêtement sur la silhouette de la personne
+    shading: 0.5,                      // 0 → 1 : reprend ombres et plis de la photo sur le vêtement
+    detector: null                     // (tests) fonction async (source, mode) => landmarks[33] ou { lms, mask }
   };
 
   // ---------------------------------------------------------------- textes
@@ -90,34 +92,72 @@
 
   // ---------------------------------------------------------------- géométrie
   var FIT = {
-    top:    { width: 1.9, top: 0.14, length: 1.25 },             // largeur × épaules, longueur × torse
-    bottom: { width: 2.1, top: 0.12, length: 1.12, waist: 0.3 }, // largeur × hanches, longueur × jambe
+    top:    { width: 2.1, top: 0.14, length: 1.25, sleeve: 0.25, sleeveLen: 0.45 }, // largeur × épaules, longueur × torse ; manches = part de l'image
+    bottom: { width: 1.75, top: 0.12, length: 1.12, waist: 0.3 }, // largeur × hanches, longueur × jambe
     shoes:  { width: 1.5, sole: 0.85, frontWidth: 1.1 }          // largeur × pied
   };
   var ORDER = { shoes: 0, bottom: 1, top: 2 };
-  var NEEDS = { top: [11, 12, 23, 24], bottom: [23, 24, 27, 28], shoes: [27, 29, 31] };
+  var NEEDS = { top: [11, 12], bottom: [23, 24, 27, 28], shoes: [27, 29, 31] };
 
   function mid(a, b) { return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; }
   function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
   function lineAngle(a, b) { var p = a.x <= b.x ? a : b, q = a.x <= b.x ? b : a; return Math.atan2(q.y - p.y, q.x - p.x); }
   function vis(P, idx, min) { min = min == null ? 0.5 : min; return idx.every(function (i) { return P[i] && P[i].v >= min; }); }
   function toPixels(lms, W, H, mirror) {
-    return lms.map(function (l) { return { x: (mirror ? 1 - l.x : l.x) * W, y: l.y * H, v: l.visibility == null ? 1 : l.visibility }; });
+    return lms.map(function (l) { return { x: (mirror ? 1 - l.x : l.x) * W, y: l.y * H, z: l.z || 0, v: l.visibility == null ? 1 : l.visibility }; });
   }
 
+  // Haut découpé en 3 : corps + deux manches qui pivotent à l'épaule pour suivre les bras.
   function drawTop(ctx, it, g, P) {
     if (!vis(P, NEEDS.top)) return false;
-    var a = P[11], b = P[12], sMid = mid(a, b), hMid = mid(P[23], P[24]);
-    var sw = dist(a, b), torso = dist(sMid, hMid);
-    if (sw < 4 || torso < 4) return false;
+    var li = P[11].x <= P[12].x ? 11 : 12, ri = li === 11 ? 12 : 11;   // épaule à gauche / à droite de l'écran
+    var Ls = P[li], Rs = P[ri], sMid = mid(Ls, Rs), sw = dist(Ls, Rs);
+    if (sw < 4) return false;
+    // hanches hors champ (personne assise devant la webcam) : longueur du torse estimée
+    var Hc = ctx.canvas.height;
+    var hipsOk = vis(P, [23, 24], 0.6) && P[23].y < Hc && P[24].y < Hc;
+    var torso = hipsOk ? dist(sMid, mid(P[23], P[24])) : sw * 1.3;
     var f = it.fit, s = it.adj.scale, W = sw * f.width * s, H = torso * f.length * s;
+    var ang = lineAngle(Ls, Rs), cos = Math.cos(ang), sin = Math.sin(ang);
+    var o = { x: sMid.x + it.adj.dx * sw, y: sMid.y + it.adj.dy * sw };
+    var src = g.canvas, gw = g.w, gh = g.h, kx = W / gw, ky = H / gh, top = torso * f.top * s;
     it._unit = sw;
-    ctx.save();
-    ctx.translate(sMid.x + it.adj.dx * sw, sMid.y + it.adj.dy * sw);
-    ctx.rotate(lineAngle(a, b));
-    ctx.drawImage(g.canvas, -W / 2, -torso * f.top * s, W, H);
+
+    var sl = f.sleeve;
+    if (!(sl > 0) || !vis(P, [li + 2, ri + 2], 0.5)) {           // coudes invisibles : image d'un seul bloc
+      ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(ang);
+      ctx.drawImage(src, -W / 2, -top, W, H);
+      ctx.restore();
+      return true;
+    }
+
+    var sx = sl * gw, sh = Math.min(gh, f.sleeveLen * gh), pivotY = top / ky, ov = 0.04 * gw;
+    var bodyW = W * (1 - 2 * sl);
+    [[Ls, P[li + 2], -1], [Rs, P[ri + 2], 1]].forEach(function (arm) {
+      var side = arm[2], lx = side * bodyW / 2;
+      var pivot = { x: o.x + lx * cos, y: o.y + lx * sin };
+      var rest = Math.atan2((sh * 0.85 - pivotY) * ky, side * sx * kx);   // direction de la manche dans l'image
+      var armAng = Math.atan2(arm[1].y - arm[0].y, arm[1].x - arm[0].x);
+      var srcX = side < 0 ? 0 : gw - sx - ov, srcW = sx + ov;
+      ctx.save();
+      ctx.translate(pivot.x, pivot.y);
+      ctx.rotate(armAng - rest);
+      ctx.drawImage(src, srcX, 0, srcW, sh, side < 0 ? -sx * kx : -ov * kx, -pivotY * ky, srcW * kx, sh * ky);
+      ctx.restore();
+    });
+
+    ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(ang);
+    ctx.drawImage(src, sx, 0, gw - 2 * sx, gh, -bodyW / 2, -top, bodyW, H);
     ctx.restore();
     return true;
+  }
+
+  function capsule(ctx, a, b, r) {
+    var ang = Math.atan2(b.y - a.y, b.x - a.x);
+    ctx.moveTo(a.x + r * Math.cos(ang + Math.PI / 2), a.y + r * Math.sin(ang + Math.PI / 2));
+    ctx.arc(a.x, a.y, r, ang + Math.PI / 2, ang + Math.PI * 1.5);
+    ctx.arc(b.x, b.y, r, ang - Math.PI / 2, ang + Math.PI / 2);
+    ctx.closePath();
   }
 
   // Le pantalon est découpé : bloc taille rigide + chaque jambe orientée hanche → cheville.
@@ -202,7 +242,7 @@
       var make = function (delegate) {
         return vision.PoseLandmarker.createFromOptions(fileset, {
           baseOptions: { modelAssetPath: config.modelUrl || base + 'models/pose_landmarker_lite.task', delegate: delegate },
-          runningMode: 'IMAGE', numPoses: 1,
+          runningMode: 'IMAGE', numPoses: 1, outputSegmentationMasks: !!config.segmentation,
           minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5
         });
       };
@@ -216,12 +256,33 @@
     return posePromise;
   }
 
+  // Masque de silhouette → canvas (alpha = probabilité d'être la personne).
+  // En vidéo, le canvas est réutilisé à chaque image ; pour une photo, il est conservé.
+  var videoMaskCanvas = null;
+  function maskToCanvas(m, reuse) {
+    var w = m.width, h = m.height, data = m.getAsFloat32Array();
+    var c = reuse ? (videoMaskCanvas || (videoMaskCanvas = document.createElement('canvas'))) : document.createElement('canvas');
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+    var cx = c.getContext('2d'), img = cx.createImageData(w, h), d = img.data;
+    for (var i = 0, n = w * h; i < n; i++) d[i * 4 + 3] = data[i] * 255;
+    cx.putImageData(img, 0, 0);
+    return c;
+  }
+
   async function detect(source, mode, ts) {
-    if (config.detector) return config.detector(source, mode);
+    if (config.detector) {
+      var r = await config.detector(source, mode);
+      return Array.isArray(r) || !r ? { lms: r || null, mask: null } : r;
+    }
     var lmk = await loadPose();
     if (lmk.__mode !== mode) { await lmk.setOptions({ runningMode: mode }); lmk.__mode = mode; }
     var res = mode === 'VIDEO' ? lmk.detectForVideo(source, ts) : lmk.detect(source);
-    return (res && res.landmarks && res.landmarks[0]) || null;
+    var lms = (res && res.landmarks && res.landmarks[0]) || null, mask = null;
+    if (res && res.segmentationMasks && res.segmentationMasks.length) {
+      try { if (lms) mask = maskToCanvas(res.segmentationMasks[0], mode === 'VIDEO'); } catch (e) { /* masque optionnel */ }
+      res.segmentationMasks.forEach(function (m) { if (m && m.close) m.close(); });
+    }
+    return { lms: lms, mask: mask };
   }
 
   // ---------------------------------------------------------------- préparation des vêtements
@@ -524,12 +585,13 @@
     var maxSide = 1600, w = img.naturalWidth || img.width, h = img.naturalHeight || img.height, r = Math.min(1, maxSide / Math.max(w, h));
     var c = document.createElement('canvas'); c.width = Math.round(w * r); c.height = Math.round(h * r);
     c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-    this.photo = { img: c, lms: null };
+    this.photo = { img: c, lms: null, mask: null };
     this.setTab('photo');
     this.setStatus(posePromise || config.detector ? t('analysing') : t('loading'));
     try {
       await this.ready;
-      this.photo.lms = await detect(c, 'IMAGE');
+      var r = await detect(c, 'IMAGE');
+      this.photo.lms = r.lms; this.photo.mask = r.mask;
       this.setStatus(this.photo.lms ? '' : t('noPose'));
     } catch (e) {
       console.error('[TryOn]', e);
@@ -538,10 +600,84 @@
     this.redraw();
   };
 
-  Session.prototype.drawGarments = function (P) {
-    var ctx = this.ctx, missing = [];
+  Session.prototype.buf = function (name, W, H) {
+    this._bufs = this._bufs || {};
+    var c = this._bufs[name] || (this._bufs[name] = document.createElement('canvas'));
+    if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+    return c;
+  };
+
+  // Compose l'image finale : personne → vêtements (découpés sur la silhouette, ombrés) → avant-bras devant.
+  Session.prototype.compose = function (frame, P, mask, mirror) {
+    var W = frame.width, H = frame.height, ctx = this.ctx;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(frame, 0, 0);
+
+    // 1) chaussures : non découpées (elles dépassent du pied) ; 2) vêtements : découpés sur la silhouette
+    var missing = this.layer(frame, P, mask, mirror, true).concat(this.layer(frame, P, mask, mirror, false));
+    this.drawForearms(frame, P);
+    return missing;
+  };
+
+  Session.prototype.layer = function (frame, P, mask, mirror, shoes) {
+    var W = frame.width, H = frame.height, ctx = this.ctx;
+    var L = this.buf('layer', W, H), lc = L.getContext('2d');
+    lc.globalCompositeOperation = 'source-over'; lc.globalAlpha = 1;
+    lc.clearRect(0, 0, W, H);
+    var missing = this.drawGarments(lc, P, function (it) { return (it.type === 'shoes') === shoes; });
+
+    if (!shoes && mask && config.segmentation) {
+      // silhouette légèrement élargie pour garder un vêtement un peu ample
+      var M = this.buf('mask', W, H), mc = M.getContext('2d'), r = Math.max(2, Math.round(W / 140));
+      mc.clearRect(0, 0, W, H);
+      mc.save();
+      if (mirror) { mc.translate(W, 0); mc.scale(-1, 1); }
+      for (var dx = -1; dx <= 1; dx++) for (var dy = -1; dy <= 1; dy++) mc.drawImage(mask, dx * r, dy * r, W, H);
+      mc.restore();
+      lc.globalCompositeOperation = 'destination-in';
+      lc.drawImage(M, 0, 0);
+    }
+
+    if (config.shading > 0) {
+      // reprend la luminosité de la scène (plis, ombres, éclairage) sur le vêtement
+      var A = this.buf('alpha', W, H), ac = A.getContext('2d');
+      ac.globalCompositeOperation = 'copy'; ac.drawImage(L, 0, 0);
+      var G = this.buf('gray', W, H), gc = G.getContext('2d');
+      gc.globalCompositeOperation = 'source-over'; gc.fillStyle = '#fff'; gc.fillRect(0, 0, W, H);
+      gc.globalCompositeOperation = 'luminosity'; gc.drawImage(frame, 0, 0);
+      lc.globalCompositeOperation = 'soft-light'; lc.globalAlpha = Math.min(1, config.shading);
+      lc.drawImage(G, 0, 0);
+      lc.globalAlpha = 1; lc.globalCompositeOperation = 'destination-in';
+      lc.drawImage(A, 0, 0);
+    }
+    lc.globalCompositeOperation = 'source-over';
+    ctx.drawImage(L, 0, 0);
+    return missing;
+  };
+
+  // Un avant-bras placé devant le corps (plus proche de la caméra) repasse par-dessus le vêtement.
+  Session.prototype.drawForearms = function (frame, P) {
+    if (!vis(P, [11, 12])) return;
+    var ctx = this.ctx, sw = dist(P[11], P[12]), zs = (P[11].z + P[12].z) / 2;
+    [[13, 15, 19], [14, 16, 20]].forEach(function (ids) {
+      if (!vis(P, [ids[0], ids[1]], 0.6)) return;
+      var e = P[ids[0]], w = P[ids[1]];
+      if ((e.z + w.z) / 2 > zs - 0.12) return;
+      var hand = P[ids[2]] && P[ids[2]].v > 0.5 ? P[ids[2]] : w, r = sw * 0.16;
+      ctx.save();
+      ctx.beginPath();
+      capsule(ctx, e, w, r);
+      capsule(ctx, w, hand, r * 1.15);
+      ctx.clip();
+      ctx.drawImage(frame, 0, 0);
+      ctx.restore();
+    });
+  };
+
+  Session.prototype.drawGarments = function (ctx, P, filter) {
+    var missing = [];
     this.items.forEach(function (it) {
-      if (!it.on || !it.g) return;
+      if (!it.on || !it.g || (filter && !filter(it))) return;
       var ok = it.type === 'top' ? drawTop(ctx, it, it.g, P)
         : it.type === 'bottom' ? drawBottom(ctx, it, it.g, P)
         : drawShoes(ctx, it, it.g, it.gFront, P);
@@ -559,11 +695,10 @@
     if (this.tab !== 'photo' || !this.photo) return;
     var c = this.photo.img;
     this.canvas.width = c.width; this.canvas.height = c.height;
-    this.ctx.drawImage(c, 0, 0);
     if (this.photo.lms) {
-      var missing = this.drawGarments(toPixels(this.photo.lms, c.width, c.height, false));
+      var missing = this.compose(c, toPixels(this.photo.lms, c.width, c.height, false), this.photo.mask, false);
       this.setStatus(this.hintFor(missing));
-    }
+    } else this.ctx.drawImage(c, 0, 0);
   };
 
   // ------------------------------------------------------------ caméra
@@ -591,19 +726,21 @@
         try {
           var W = video.videoWidth, H = video.videoHeight, mirror = self.cam.facing === 'user';
           var ts = Math.max(performance.now(), lastTs + 1); lastTs = ts;
-          var lms = await detect(video, 'VIDEO', ts);
+          var r = await detect(video, 'VIDEO', ts);
           if (self.canvas.width !== W) self.canvas.width = W;
           if (self.canvas.height !== H) self.canvas.height = H;
-          var ctx = self.ctx;
-          ctx.save();
-          if (mirror) { ctx.translate(W, 0); ctx.scale(-1, 1); }
-          ctx.drawImage(video, 0, 0, W, H);
-          ctx.restore();
-          if (lms) {
-            var P = toPixels(lms, W, H, mirror);
-            P = self.smooth(P);
-            self.setStatus(self.hintFor(self.drawGarments(P)));
-          } else { self.cam.prev = null; self.setStatus(self.hintFor(['top'])); }
+          var frame = self.buf('frame', W, H), fc = frame.getContext('2d');
+          fc.save();
+          if (mirror) { fc.translate(W, 0); fc.scale(-1, 1); }
+          fc.drawImage(video, 0, 0, W, H);
+          fc.restore();
+          if (r.lms) {
+            var P = self.smooth(toPixels(r.lms, W, H, mirror));
+            self.setStatus(self.hintFor(self.compose(frame, P, r.mask, mirror)));
+          } else {
+            self.ctx.drawImage(frame, 0, 0);
+            self.cam.prev = null; self.setStatus(self.hintFor(['top']));
+          }
         } catch (e) { console.error('[TryOn]', e); }
         self.cam.busy = false;
       };
@@ -617,7 +754,7 @@
   // lissage exponentiel pour éviter les tremblements
   Session.prototype.smooth = function (P) {
     var prev = this.cam.prev, a = 0.55;
-    if (prev) P = P.map(function (p, i) { var q = prev[i]; return { x: q.x + (p.x - q.x) * a, y: q.y + (p.y - q.y) * a, v: p.v }; });
+    if (prev) P = P.map(function (p, i) { var q = prev[i]; return { x: q.x + (p.x - q.x) * a, y: q.y + (p.y - q.y) * a, z: q.z + (p.z - q.z) * a, v: p.v }; });
     this.cam.prev = P;
     return P;
   };
